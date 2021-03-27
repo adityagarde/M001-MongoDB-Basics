@@ -1,0 +1,117 @@
+M001 MongoDB Basics - MnongoDB University
+Chapter 1-3
+
+NoSQL - document Database - data is stored as documents.
+
+Document is a way to organise and store data as a part of field value pairs.
+Collection - collection of Documents.
+Database - contains multiple collections.
+
+MongoDB Atlas - 
+
+Clusters - group of servers hat store your data.
+
+Replica Sets - set of few connected mongoDB instances hat store the same data.
+
+Documents are in JSON format.
+keys are also known as fields.
+
+Cons of JSON - Text-based, space consuming.
+to address this BSON - Binary JSON - bridge between Binary representation and JSON.
+Optimised for Speed, Space and Felxibility. => High Performance.
+
+MongoDB stores data in BSON internally and over the network - BUT data can be accessed in JSON. BSON has support for some additional data types like Date over only primitive data types in JSON.
+
+URI String - uses srv connection - secure way to connect.
+mongodb_srv://user:password@clusterURI.mongodb.net/database
+
+		Importing  & Exporting - 
+JSON - mongoimport & mongoexport
+BSON - mongostore  & mongodump
+
+mongodump --uri "<Atlas Cluster URI>"    ---> BSON
+
+mongoexport --uri "<Atlas Cluster URI>"
+			--collection=<collection name>
+			--out=<filename>.json        ---> JSON
+
+mongostore --uri "<Atlas Cluster URI>"   ---> BSON
+		   --drop dump
+
+mongoimport --uri "<Atlas Cluster URI>"
+			--drop=<filename>.json 		 ---> JSON  -- this data file can be in JSON format or CSV format.
+
+--drop - used to drop existing database - required to avoid duplicate data errors.
+
+
+Data Explorer - 
+	Name space = concatination of collectionName.databaseName
+
+admin DB
+
+show dbs - shows DBs in the cluster.
+use <db name>- to switch to that DB.
+show collections - shows collections inside a DB.
+
+db.zips.find({"state" : "NY", "zip" : "440010"})
+<dbname>.<collectionname>
+
+it => iterate
+	- iterates through the cursor - which is an object that find command returns
+								  - a pointer to the result set of the Query
+								  		- A pointer is a direct address to the memory location.
+
+db.<collectionName>.find(<query>).count() =>no. of documents in that collection.						
+
+Formatting - 
+
+db.<collectionName>.find(<query>).pretty()
+
+mongo "mongodb+srv://sandbox.nl0wz.mongodb.net/sample_training" --username m001-student
+m001-mongodb-basics
+
+
+db.zips.find({"city" : "BRONX", "state" : "NY"}).pretty()
+
+_id : mandatory, unique field in every document. Rest all fields may be there, may not be there.
+ObjectId()
+
+db.zips.findOne()
+
+Implicit Creation - If you insert document in a collection that doesnt exist - then that collection will get created for you. Same is for a DB.
+
+db.collection.insert([{<doc1>}, {<doc2>}])
+{"ordered" : false} - to disable default ordered insert.
+when ordering is deafult - i.e. in order of insertion - if any error occurs then further documents will not be inserted.
+if ordering id false - then duplicate entries will not be inserted - and unique id entries will be inserted irrespective of the order.
+
+Updating in MQL -
+	updateOne() - update the first which matches the Query.
+	updateMany() - will update all documents which match the Query.
+
+1. $inc
+	db.zips.updateMany({ "city": "HUDSON" }, { "$inc": { "pop": 10 } })
+	"$inc" - this will increment the pop field by 10 for all the documents where city is HUDSON in zips collection.
+	This can be used to update multiple fields in one Query.
+
+2. $set
+	db.zips.updateOne({ "zip": "12534" }, { "$set": { "pop": 17630 } })
+	"$set" will update directly the value passed.
+	This also can be used to update multiple fields at a time.
+	If the field is not present then it is automatically added to those documents.
+
+3. $push
+	adds an element to an array field.
+	db.grades.updateOne({ "student_id": 250, "class_id": 339 },
+                    { "$push": { "scores": { "type": "extra credit",
+                                             "score": 100 }
+                                }
+                     })
+4. $unset
+
+Deleting -
+	deleteOne()
+	deleteMany()
+
+using deleteOne() is best when using _id to ensure that only the required document is deleted and not others.
+db.<collection>.drop()

@@ -1,0 +1,86 @@
+Chapter 5 - INDEXING AND AGGREGATES
+
+1. Aggrgate is more powerful than MQL / find() where we can do much more operations than just find().
+
+	Find all documents that have Wifi as one of the amenities. Only include price and address in the resulting cursor.
+
+	db.listingsAndReviews.find({ "amenities": "Wifi" },
+                        	   { "price": 1, "address": 1, "_id": 0 }).pretty()
+
+                        	   OR
+	db.listingsAndReviews.aggregate([
+                                  { "$match": { "amenities": "Wifi" } },
+                                  { "$project": { "price": 1,
+                                                  "address": 1,
+                                                  "_id": 0 }}]).pretty()
+
+	Aggregation framework works like a pipeline where the order of actions in a pipleline matter i.e. each order is executed in the order listed.
+
+	$group - An operator which takes the incoming stream of data, and siphons it into multiple distinct reservoirs.
+
+	{ $group :
+		{
+			_id = "$field_name"
+			<field_1> : {<accumulator_1> : <expression_1> }, 
+			<field_2> : {<accumulator_2> : <expression_2> }, 
+		}
+	}
+
+	Project only the address field value for each document, then group all documents into one document per address.country value.
+
+	db.listingsAndReviews.aggregate([ { "$project": { "address": 1, "_id": 0 }},
+                                  	  { "$group": { "_id": "$address.country" }}])
+
+	Project only the address field value for each document, then group all documents into one document per address.country value, and count one for each document in each group.
+
+	db.listingsAndReviews.aggregate([
+                                  { "$project": { "address": 1, "_id": 0 }},
+                                  { "$group": { "_id": "$address.country",
+                                                "count": { "$sum": 1 } } }
+                                ])
+
+    Q - Types of Rooms in Airbnb collection.
+
+ 	A - db.listingsAndReviews.aggregate([ { "$project": { "room_type": 1, "_id": 0 }},
+                                  	  	{ "$group": { "_id": "$room_type" }}])
+        OR db.listingsAndReviews.aggregate([ { "$group": { "_id": "$room_type" } }])
+
+2. sort() and limit() - Cursor methods like count() and pretty()
+	
+	- Getting results in an order / quantity as required.
+
+	db.zips.find().sort({ "pop": 1 }).limit(1) - Querying the whole collections, sorting them in increasing order (1 for increasing and -1 for decreasing) based on field passed ($pop here) and returning only the first such document.
+
+	- sort() and limit() - Cursor methods like count() and pretty()
+	These are just applied to the cursor data after being fetched and not to the actual DB.
+
+	db.zips.find().sort({ "pop": 1, "city": -1 }).pretty() - multiple conditions.
+
+	Logically use sort first then limit. So regardless of the orders, mongoDB considers sort() first and then limit().
+	Limit by itself will just return random documents.
+
+	db.companies.find({ "founded_year": { "$ne": null }},
+                  { "name": 1, "founded_year": 1 }
+                 ).sort({ "founded_year": 1 }).limit(5)
+
+    db.trips.find({ "birth year": { "$ne": "" }},
+			            { "birth year": 1 }
+			            ).sort({ "birth year": -1 }).limit(1)
+
+3. Indexing - Index is a special data structure that stores a small portion of the collection's data set in an easy to traverse form.
+	
+	Single field Index - 
+	db.trips.createIndex({"birth year" : 1}) -> 1 Increasing and -1 for Decreasing.
+
+	Compound Index - db.trips.createIndex({ "start station id": 476, "birth year": 1 })
+
+4. Introduction to Data Modeling
+	
+	A way to organize fields in a document to support your application performace and querying capabilities.
+	Data is stored in the way it is used.
+
+5. Upserts
+
+	db.collection.updateOne({<query>}, {<update>}, {"upsert"})
+
+	Update when document already exists and insert when document does not exist.

@@ -1,0 +1,127 @@
+Chapter 4 : Advanced Queries
+
+1. Comparison Operators
+
+	{<field> : {<operator> : <value>}}
+	$eq, $neq, $gt, $lt, $gte, $lte
+
+	db.trips.find({ "tripduration": { "$lte" : 70 },
+	                "usertype": { "$ne": "Subscriber" } }).pretty()
+
+	db.zips.find({"pop" : {"$lt" : 1000}}).count()
+
+2. Logic Operators
+	
+	$and, $or, $nor - {<operator> : [{statement1}, {statement2}, {statement3}, ....]}
+
+	$not - {$not : {statement}}
+
+	db.zips.find({"pop" : {"$gt" : 1000000}}).count()
+	db.zips.find({"pop" : {"$lt" : 5000}}).count()
+
+	db.companies.find($or : [{"category_code" : "social"}, {"category_code" : "social"}}])
+
+	db.companies.find( {
+	    $and: [
+	        { $or: [ { "category_code": "social"}, { "category_code" :"web"} ] },
+	        { $or: [ { "founded_year": 2004 }, { "founded_month" : 10 }  ] }
+	    ]
+	} ).count()
+
+
+	db.companies.find({ "$or": [{ "$and" :[{"founded_year" : 2004},{ "$or" :[ { "category_code": "social" }, { "category_code": "web" } ] } ]}, {"$and":[{"founded_month" : 10},{ "$or" :[ { "category_code": "social" }, { "category_code": "web"}]}]}]}).count()
+
+	db.companies.find({ "$and": [
+	                        { "$or": [ { "founded_year": 2004 }, { "founded_month": 10 } ] },
+	                        { "$or": [ { "category_code": "web" }, { "category_code": "social" }]}]}).count()
+
+3. Expressive Query Opertor
+
+	$expr - allows e use of aggregation expressions within the query language
+	syntax - { $expr : { <expressions> } }
+	It allows us to use variables and conditional statements.
+
+	db.trips.find({ "$expr": { "$eq": [ "$end station id", "$start station id"] }
+	              }).count()
+	$ followed by the field name is like a generic way to use the value specific to that document.
+
+	db.trips.find({ "$expr": { "$and": [ { "$gt": [ "$tripduration", 1200 ]},
+	                         { "$eq": [ "$end station id", "$start station id" ]}
+	                       ]}}).count()
+	MQL Syntax : {<field> : {<operator> : <value> } }
+	Aggregation Syntax : {<operator> : { <field> , <value> } }
+
+	Q - Find all the companies that have more employees than the year in which they were founded.
+	A - db.companies.find( {"$expr" : {"$gt" : ["$number_of_employees", "$founded_year"]}}).count()
+
+	db.companies.find({"$expr" : {"$eq" : ["$permalink", "$twitter_username"]}}).count()
+
+4. Array Operators
+
+	{<array_field> : {"$size" : <number> }} -- returns a cursor with all the documents where the specified array field is exactly the given length.
+
+	{<array_field> : {"$all" : <array> }} -- returns a cursor with all the documents in which the specified array field contains all the given elements 										   regardless of their order in the array.
+
+	Querying an array field using an array returns only exact array matches.
+
+	db.listingsAndReviews.find({ "amenities": {
+                                  "$size": 20,
+                                  "$all": [ "Internet", "Wifi",  "Kitchen",
+                                           "Heating", "Family/kid friendly",
+                                           "Washer", "Dryer", "Essentials",
+                                           "Shampoo", "Hangers",
+                                           "Hair dryer", "Iron",
+                                           "Laptop friendly workspace" ]
+                                         }
+                            }).pretty()
+
+	db.listingsAndReviews.find({"$and": [ {"accommodates" : {"$gt" : 6}}, {"reviews" : {"$size": 50}}] })
+
+	db.listingsAndReviews.find({ "reviews": { "$size":50 }, "accommodates": { "$gt":6 }})
+
+	db.listingsAndReviews.find({ "property_type" : "House", "amenities": { "$all": [ "Changing table" ]}}).count()
+
+	db.listingsAndReviews.find({ "property_type" : "House", "amenities": "Changing table" }).count()
+
+	There is no need to use any array operators in this scenario. The default MQL behavior is to return documents in which the "amenities" field contains the element "Changing table".
+
+	db.listingsAndReviews.find({ "amenities": { "$all": [ "Free parking on premises", "Wifi", "Air conditioning" ] }, "bedrooms": { "$gte":  2 } }).pretty()
+
+5. Array Operators and Projections
+
+	Used when we want to see specific fields only in the query output.
+
+	Syntax - db.<collection>.find({<query>}, {<projections>})
+	1 => Include the field
+	0 => Do not include the field
+
+	Use either only 0s or only 1s
+
+	db.<collection>.find({<query>}, {<field_1> : 1, <field_2> : 1})
+	OR
+	db.<collection>.find({<query>}, {<field_1> : 0, <field_2> : 0})
+	Exception case - 
+		db.<collection>.find({<query>}, {<field_1> : 1, "_id": 0})
+
+	$elemMatch - Matches documents that contain an array field with at least one element that matches the specified query criteria.
+	OR Projects only the array elements with atleast one element that matches the specified criteraia.
+		{<field>, { "elemMatch" : {<field> : <value>} }} 
+
+	Q - Find all documents where the student in class 431 received a grade higher than 85 for any type of assignment.
+	A - db.grades.find({ "class_id": 431 }, { "scores": { "$elemMatch": { "score": { "$gt": 85 } } } }).pretty()
+
+	db.companies.find({ "offices": { "$elemMatch": { "city": "Seattle" } } }).count()
+
+6. Array Operators and Sub-Documents
+
+	Accessing fields in a sub-document. Using "." - dot notation. To utilize . notation in array - specify the array position.
+
+	db.trips.findOne({ "start station location.type": "Point" })
+
+	db.companies.find({ "relationships.0.person.first_name": "Mark",
+                    "relationships.0.title": {"$regex": "CEO" } },
+                  { "name": 1 }).pretty()
+
+    db.trips.find({ "start station location.coordinates": { "$lt": -74 }}).count()
+
+    db.inspections.find({ "address.city": "NEW YORK"}).count()
